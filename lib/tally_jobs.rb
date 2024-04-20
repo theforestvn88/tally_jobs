@@ -31,7 +31,8 @@ module TallyJobs
   def start
     MUTEX.synchronize do
       @tally_thread ||= Thread.new do
-        p "start tally-jobs ..."
+        TallyJobs.configs.logger&.info("[TallyJobs] started ...")
+        
         while true
           sleep(TallyJobs.configs.interval || 300)
 
@@ -43,6 +44,8 @@ module TallyJobs
 
   # force flush all in-memory enqueued jobs before exit
   at_exit do
+    TallyJobs.configs.logger&.info("[TallyJobs] flushing ...")
     JobsCounter.collect_then_perform_later(JOBS_QUEUE)
+    TallyJobs.configs.logger&.info("[TallyJobs] stop ...")
   end
 end

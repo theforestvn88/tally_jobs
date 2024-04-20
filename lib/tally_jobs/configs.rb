@@ -2,6 +2,6 @@
 
 module TallyJobs
     class Configs
-        attr_accessor :interval
+        attr_accessor :interval, :logger
     end
 end
