@@ -29,8 +29,13 @@ module TallyJobs
     
         def perform(*args)
             data_for_all = data_for_all_tasks.map { |q| q.call(*args) }
-            datas = data_for_each_tasks.map { |q| q.call(*args) }.inject(&:zip)
-            datas.each { |data| each_do(*data_for_all, *data) }
+            datas = data_for_each_tasks.map { |q| q.call(*args) }
+
+            max_size = datas.max_by(&:size).size
+            top = datas.shift 
+            top += Array.new(max_size - top.size, nil)
+            zip_datas = top.zip(*datas)
+            zip_datas.each { |data| each_do(*data_for_all, *data) }
         end
     end
 end
