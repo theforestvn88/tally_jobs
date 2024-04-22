@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "./in_mem_counter_store"
+require_relative "./counter_store/memory_counter_store"
 
 module TallyJobs
     class JobsCounter
-        cattr_accessor :store, default: InMemCounterStore
+        cattr_accessor :store, default: TallyJobs::CounterStore::MemoryCounterStore.new
 
         def self.collect_then_perform_later
             groups = Hash.new { |h, k| h[k] = [] }

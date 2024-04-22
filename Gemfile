@@ -14,3 +14,5 @@ gem "rspec", "~> 3.0"
 gem "rspec-rails"
 
 gem "sqlite3", "~> 1.4"
+
+gem "redis"
