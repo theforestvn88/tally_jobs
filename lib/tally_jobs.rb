@@ -9,7 +9,8 @@ require_relative "tally_jobs/tally_data"
 module TallyJobs
   class Error < StandardError; end
 
-  mattr_reader :configs, :default => TallyJobs::Configs.new
+  mattr_accessor :runnable, default: true
+  mattr_reader :configs, default: TallyJobs::Configs.new
   class << self
     def setup
       yield configs
@@ -19,12 +20,6 @@ module TallyJobs
   end
 
   module_function
-
-  # in-memory job queue
-  JOBS_QUEUE = Thread::Queue.new
-  def enqueue(job_clazz, *params)
-    JOBS_QUEUE.enq([job_clazz, *params])
-  end
   
   # start a thread to flush in-memory enqueued jobs
   # each {interval} time
@@ -36,17 +31,24 @@ module TallyJobs
       @tally_thread ||= Thread.new do
         TallyJobs.configs.logger&.info("[TallyJobs] started ...")
         while true
-          break unless @runnable
+          break unless TallyJobs.runnable
           sleep(TallyJobs.configs.interval || 300)
 
-          JobsCounter.collect_then_perform_later(JOBS_QUEUE)
+          JobsCounter.collect_then_perform_later
         end
       end
     end
   end
 
+  def flush
+    TallyJobs.configs.logger&.info("[TallyJobs] flushing ...")
+    JobsCounter.collect_then_perform_later
+  end
+
   def stop
-    @runnable = false
+    flush
+
+    TallyJobs.runnable = false
     if @tally_thread && @tally_thread.alive?
       @tally_thread.wakeup
       @tally_thread.join
@@ -55,14 +57,13 @@ module TallyJobs
   end
 
   def restart
-    @runnable = true
+    stop
+    TallyJobs.runnable = true
     start
   end
 
   # force flush all in-memory enqueued jobs before exit
   at_exit do
-    TallyJobs.configs.logger&.info("[TallyJobs] flushing ...")
-    JobsCounter.collect_then_perform_later(JOBS_QUEUE)
     TallyJobs.stop
   end
 end
