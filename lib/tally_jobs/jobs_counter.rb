@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+require_relative "./in_mem_counter_store"
+
 module TallyJobs
     class JobsCounter
-        def self.collect_then_perform_later(queue)
+        cattr_accessor :store, default: InMemCounterStore
+
+        def self.collect_then_perform_later
             groups = Hash.new { |h, k| h[k] = [] }
-            until queue.empty?
-                job_clazz, *params = queue.deq
+            until store.empty?
+                job_clazz, *params = store.dequeue
                 groups[job_clazz] << (params.size == 1 ? params[0] : params)
             end
 

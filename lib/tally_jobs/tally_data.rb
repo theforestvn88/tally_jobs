@@ -20,7 +20,7 @@ module TallyJobs
 
         module ClassMethods
             def enqueue_to_tally(*params)
-                TallyJobs.enqueue(self, *params)
+                TallyJobs::JobsCounter.store.enqueue(self, *params)
             end
         end
 

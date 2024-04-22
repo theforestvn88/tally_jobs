@@ -2,5 +2,6 @@
 
 TallyJobs.setup do |config|
     config.interval = 300 # seconds
-    # config.logger = ?
+    config.logger = Rails.logger
+    # config.counter_store = YourCustomCounterStore
 end

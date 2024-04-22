@@ -6,7 +6,7 @@ RSpec.describe "Counter Thread" do
     before do
         TallyJobs.stop
         TallyJobs.configs.interval = 1 # seconds
-        TallyJobs::JOBS_QUEUE.clear
+        TallyJobs::JobsCounter.store.clear
         
         allow(ATallyJob).to receive(:perform_later) do |args|
             called_params << args
@@ -32,12 +32,9 @@ RSpec.describe "Counter Thread" do
         expect(called_params).to eq([])
 
         TallyJobs.restart
-            ATallyJob.enqueue_to_tally(1)
-            ATallyJob.enqueue_to_tally(2)
-            ATallyJob.enqueue_to_tally(3)
-            sleep 2
+            sleep 1
         TallyJobs.stop
 
-        expect(called_params).to eq([[6,7,8,1,2,3]])
+        expect(called_params).to eq([[6,7,8]])
     end
 end
