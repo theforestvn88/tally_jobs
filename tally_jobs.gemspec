@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
 
+  spec.add_dependency "activejob"
   spec.add_dependency "railties"
 
   spec.add_development_dependency 'rails'

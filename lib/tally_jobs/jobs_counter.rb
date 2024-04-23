@@ -14,7 +14,12 @@ module TallyJobs
             end
 
             groups.each do |job_clazz, params_list|
-                job_clazz.perform_later(params_list)
+                if job_clazz.is_a? Array
+                    job_clazz, options = *job_clazz
+                    job_clazz = job_clazz.set(**options)
+                end
+
+                job_clazz&.perform_later(params_list)
             end
         end
     end

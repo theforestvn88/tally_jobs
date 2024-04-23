@@ -5,6 +5,7 @@ require_relative "tally_jobs/engine"
 require_relative "tally_jobs/configs"
 require_relative "tally_jobs/jobs_counter"
 require_relative "tally_jobs/tally_data"
+require_relative "tally_jobs/configured_job"
 
 module TallyJobs
   class Error < StandardError; end

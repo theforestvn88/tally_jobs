@@ -65,4 +65,22 @@ RSpec.describe TallyJobs::TallyData do
 
         expect(subject).not_to have_received(:each_do)
     end
+
+    it "enqueue variant configured jobs to tally" do
+        allow(ATallyJob).to receive(:perform_later)
+
+        TallyJobs::JobsCounter.store.clear
+        ATallyJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(1)
+        ATallyJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(2)
+        ATallyJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(3)
+
+        configured_job = ATallyJob.set(wait_until: Date.tomorrow.noon)
+        allow(configured_job).to receive(:perform_later)
+        allow(ATallyJob).to receive(:set).and_return(configured_job)
+
+        TallyJobs.flush
+
+        expect(ATallyJob).to have_received(:set).with(wait_until: Date.tomorrow.noon).once
+        expect(configured_job).to have_received(:perform_later).with([1,2,3])
+    end
 end
