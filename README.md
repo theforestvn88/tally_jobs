@@ -20,7 +20,7 @@ class ReportSpamCommentJob < ApplicationJob
 
     def perform(comment_id)
         comment = Comment.find(comment_id)
-        Report.report_spam_comment(comment_id) if SpamDetective.check_spam(comment.content)
+        Report.report_spam_comment(comment) if SpamDetective.check_spam(comment)
     end
 end
 
@@ -64,7 +64,7 @@ class ReportSpamCommentJob < ApplicationJob
 
     def perform(*comment_ids)
         comments = Comment.where(id: comment_ids) # one read query
-        if spams = SpamDetective.check_spam(comments)
+        if spams = SpamDetective.check_spams(comments)
             Report.report_spam_comments(spams) # one write query
         end
     end
@@ -79,6 +79,33 @@ The basic idea:
 
 
 ## Notes
+
+- `ActiveJob::ConfiguredJob` is counted separately from `ActiveJob`
+```ruby
+    ReportSpamCommentJob.enqueue_to_tally(1)
+    ReportSpamCommentJob.enqueue_to_tally(2)
+    ReportSpamCommentJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(3)
+    ReportSpamCommentJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(4)
+    # => enqueue 2 tally job
+    # one for ReportSpamCommentJob with [1,2]
+    # and one for [@job_class=ReportSpamCommentJob, @options={:wait_until=>Thu, 25 Apr 2024 12:00:00.000000000 UTC +00:00}] with [3,4]
+    #
+```
+
+- support perform in-batch
+
+```ruby
+class ReportSpamCommentJob < ApplicationJob
+    queue_as :default
+
+    include TallyJobs::TallyData
+
+    batch_size 100
+
+    def perform(one_hundred_comment_ids)
+    end
+end
+```
 
 - call `TallyJobs#stop` to stop counter thread, call `TallyJobs#restart` to restart counter thread
 - in tests, just stop counter thread before all test cases, if you want to test job enqueued, you could start/flush/stop counter thread on each test case:
@@ -96,21 +123,6 @@ The basic idea:
         TallyJobs.stop # this is also call flush
     }.to have_enqueued_job(ReportSpamCommentJob).with([3,4,5])
     ```
-
-- support perform in-batch
-
-```ruby
-class ReportSpamCommentJob < ApplicationJob
-    queue_as :default
-
-    include TallyJobs::TallyData
-
-    batch_size 100
-
-    def perform(one_hundred_comment_ids)
-    end
-end
-```
 
 ## Todo
 
