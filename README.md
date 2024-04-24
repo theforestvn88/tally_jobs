@@ -28,7 +28,7 @@ class CommentController < ApplicationController
     # ...
     def create
         # ...
-        ReportSpamCommentJob.enqueue_to_tally(comment.id)
+        ReportSpamCommentJob.perform_later(comment.id)
         # ...
     end
 
@@ -80,15 +80,20 @@ The basic idea:
 
 ## Notes
 
-- `ActiveJob::ConfiguredJob` is counted separately from `ActiveJob`
+- `ActiveJob::ConfiguredJob` is counted separately from `ActiveJob`, `ActiveJob::ConfiguredJob` is counted on a pair [job class, configured options].
 ```ruby
     ReportSpamCommentJob.enqueue_to_tally(1)
     ReportSpamCommentJob.enqueue_to_tally(2)
     ReportSpamCommentJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(3)
     ReportSpamCommentJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(4)
     # => enqueue 2 tally job
-    # one for ReportSpamCommentJob with [1,2]
-    # and one for [@job_class=ReportSpamCommentJob, @options={:wait_until=>Thu, 25 Apr 2024 12:00:00.000000000 UTC +00:00}] with [3,4]
+    #
+    # one for ReportSpamCommentJob
+    # with [1,2]
+    #
+    # and one for [@job_class=ReportSpamCommentJob,
+    #              @options={:wait_until=>Thu, 25 Apr 2024 12:00:00.000000000 UTC +00:00}]
+    # with [3,4]
     #
 ```
 
