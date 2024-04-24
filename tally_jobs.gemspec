@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["theforestvn88"]
   spec.email = ["theforestvn88@gmail.com"]
 
-  spec.summary = "Collect all same jobs in an interval time then execute them only one time"
-  spec.description = "Collect all same jobs in an interval time then execute them only one time"
+  spec.summary = "Collect all params of the same jobs within an interval time then enqueue that job only one time."
+  spec.description = "Collect all params of the same jobs within an interval time then enqueue that job only one time."
   spec.homepage = "https://github.com/theforestvn88/tally_jobs.git"
   spec.required_ruby_version = ">= 1.0.0"
 
