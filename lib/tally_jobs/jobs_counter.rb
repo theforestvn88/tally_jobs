@@ -14,12 +14,25 @@ module TallyJobs
             end
 
             groups.each do |job_clazz, params_list|
+                batch_size = nil
+
                 if job_clazz.is_a? Array
                     job_clazz, options = *job_clazz
+                    batch_size = job_clazz._batch_size
                     job_clazz = job_clazz.set(**options)
+                else
+                    batch_size = job_clazz._batch_size
                 end
 
-                job_clazz&.perform_later(params_list)
+                next if job_clazz.nil?
+
+                if batch_size.nil?
+                    job_clazz.perform_later(params_list)
+                else
+                    params_list.each_slice(batch_size).each do |slice_params|
+                        job_clazz.perform_later(slice_params)
+                    end
+                end
             end
         end
     end

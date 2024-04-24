@@ -17,53 +17,22 @@ RSpec.describe TallyJobs::TallyData do
         expect(TallyJobs::JobsCounter.store.dequeue).to eq([AnotherTallyJob, :x])
     end
 
-    it "should perform with prepared data" do
+    it "batch tally job should perform in-batch" do
         called_params = []
-
-        allow_any_instance_of(ATallyJob).to receive(:each_do) do |job, *args|
-            called_params << [job.class, *args]
-        end
-
-        allow_any_instance_of(AnotherTallyJob).to receive(:each_do) do |job, *args|
-            called_params << [job.class, *args]
+        allow(BatchTallyJob).to receive(:perform_later) do |args|
+            called_params << args
         end
 
         TallyJobs::JobsCounter.store.clear
 
-        ATallyJob.new.perform([1, [2, 3], :x])
-        AnotherTallyJob.new.perform([1, [2, 3], :x])
+        (1..15).each { |i| BatchTallyJob.enqueue_to_tally(i) }
 
-        expect(called_params).to eq([
-            [ATallyJob, 100, "Integer", "1"], [ATallyJob, 100, "Array", "[2, 3]"], [ATallyJob, 100, "Symbol", "x"],
-            [AnotherTallyJob, -100, Integer, 1], [AnotherTallyJob, -100, Array, [2, 3]], [AnotherTallyJob, -100, Symbol, :x]
-        ])
-    end
-
-    it "should called with orderd data_for_each and should auto fill nil for shorter data" do
-        called_params = []
-
-        allow_any_instance_of(NotEqualDataJob).to receive(:each_do) do |job, *args|
-            called_params << [job.class, *args]
-        end
+        TallyJobs::JobsCounter.collect_then_perform_later
         
-        TallyJobs::JobsCounter.store.clear
-        NotEqualDataJob.new.perform([1,2,3])
-
         expect(called_params).to eq([
-            [NotEqualDataJob, :not_equal, 1, 1, 1], 
-            [NotEqualDataJob, :not_equal, nil, 2, 2],
-            [NotEqualDataJob, :not_equal, nil, 3, nil]
+            (1..10).to_a,
+            (11..15).to_a
         ])
-    end
-
-    it "self-handle job should not call each_do" do
-        subject = SelfHandleJob.new
-        allow(subject).to receive(:each_do)
-
-        TallyJobs::JobsCounter.store.clear
-        subject.perform([1,2,3])
-
-        expect(subject).not_to have_received(:each_do)
     end
 
     it "enqueue variant configured jobs to tally" do
@@ -82,5 +51,27 @@ RSpec.describe TallyJobs::TallyData do
 
         expect(ATallyJob).to have_received(:set).with(wait_until: Date.tomorrow.noon).once
         expect(configured_job).to have_received(:perform_later).with([1,2,3])
+    end
+
+    it "enqueue variant configured batch jobs to tally" do
+        allow(BatchTallyJob).to receive(:perform_later)
+
+        TallyJobs::JobsCounter.store.clear
+        (1..15).each { |i| BatchTallyJob.set(wait_until: Date.tomorrow.noon).enqueue_to_tally(i) }
+
+        configured_job = BatchTallyJob.set(wait_until: Date.tomorrow.noon)
+        called_params = []
+        allow(configured_job).to receive(:perform_later) do |args|
+            called_params << args
+        end
+        allow(BatchTallyJob).to receive(:set).and_return(configured_job)
+
+        TallyJobs.flush
+
+        expect(BatchTallyJob).to have_received(:set).with(wait_until: Date.tomorrow.noon).once
+        expect(called_params).to eq([
+            (1..10).to_a,
+            (11..15).to_a
+        ])
     end
 end

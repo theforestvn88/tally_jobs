@@ -5,15 +5,10 @@ module TallyJobs
         def self.included(base)
             base.extend ClassMethods
             base.class_eval do
-                cattr_reader :data_for_all_tasks, default: []
-                cattr_reader :data_for_each_tasks, default: []
+                cattr_accessor :_batch_size
 
-                def self.data_for_all(block)
-                    self.data_for_all_tasks << block
-                end
-            
-                def self.data_for_each(block)
-                    self.data_for_each_tasks << block
+                def self.batch_size(size)
+                    self._batch_size = size
                 end
             end
         end
@@ -22,20 +17,6 @@ module TallyJobs
             def enqueue_to_tally(*params)
                 TallyJobs::JobsCounter.store.enqueue(self, *params)
             end
-        end
-
-        def each_do(*data)
-        end
-    
-        def perform(*args)
-            data_for_all = data_for_all_tasks.map { |q| q.call(*args) }
-            datas = data_for_each_tasks.map { |q| q.call(*args) }
-
-            max_size = datas.max_by(&:size).size
-            top = datas.shift 
-            top += Array.new(max_size - top.size, nil)
-            zip_datas = top.zip(*datas)
-            zip_datas.each { |data| each_do(*data_for_all, *data) }
         end
     end
 end
